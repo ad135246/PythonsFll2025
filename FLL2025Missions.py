@@ -6,7 +6,7 @@ from pybricks.tools import wait
 from pybricks.parameters import Color
 
 # -----------------------------
-# Robot configuration
+# Robot configuratio
 # -----------------------------
 WHEEL_RADIUS_CM = 3.175
 WHEEL_DIAMETER_MM = WHEEL_RADIUS_CM * 2 * 10  # cm -> mm
@@ -241,15 +241,16 @@ def mission_5():
     hub.imu.reset_heading(0)
     wait(200)
 
-    drive_cm(80, 30, 20)
+    drive_cm(80, 30, 50)
     gyro_turn(-90, slow_turn=True,axis_turn=True)
     motor_c.run_until_stalled(600, then=Stop.BRAKE, duty_limit=35)
-    drive_cm(14, 30, 5)
-    #gyro_turn(-30, slow_turn=True)
-    #drive_cm(12, 30, 30)
-
-    run_motor_for_degrees(motor_c, -300, 300)
-    #gyro_turn(10, fast_turn=True)
+    drive_cm(14, 30, 50)
+    run_motor_for_degrees(motor_c, -400, 300)
+    gyro_turn(-35, slow_turn=True)
+    motor_d.run_until_stalled(-600, then=Stop.BRAKE, duty_limit=35)
+    drive_cm(18, 30, 50)
+    run_motor_for_degrees(motor_d, 400, 500)
+    gyro_turn(20, slow_turn=False)
 
     #control_lift_motor = Motor(Port.D,Direction.COUNTERCLOCKWISE,[[12,20],[12,20]])
     #control_lift_motor.run_until_stalled(-200,then=Stop.BRAKE,duty_limit=10)
