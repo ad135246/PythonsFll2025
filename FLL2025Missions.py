@@ -100,11 +100,10 @@ def gyro_turn(target_deg, slow_turn=False,axis_turn=True):
             left_motor.run(turn_speed*speed)
             right_motor.run(-speed)
 
-        wait(10)
+        wait(100)
 
     left_motor.stop()
     right_motor.stop()
-    wait(100)
 
 # -----------------------------
 # Mission implementations (0–5)
@@ -199,7 +198,7 @@ def mission_3():
     drive_cm(-8, 30, 15)
     drive_cm(18.5, 30, 10)
     drive_cm(-4, 30, 10)
-    motor_c.run_until_stalled(-100, then=Stop.BRAKE, duty_limit=35)
+    motor_c.run_until_stalled(-200, then=Stop.BRAKE, duty_limit=35)
     drive_cm(2, 30, 10)
     motor_d.run_until_stalled(-300, then=Stop.BRAKE, duty_limit=50)
     motor_c.run_until_stalled(200, then=Stop.BRAKE, duty_limit=60)
@@ -237,27 +236,38 @@ def mission_4():
 def mission_5():
     print("Mission 5#")
     setup_drive()
-
+    #motor_d.close()
+   
     hub.imu.reset_heading(0)
     wait(200)
 
-    drive_cm(73, 30, 100)
-    gyro_turn(-90, slow_turn=True)
-    drive_cm(23, 30, 5)
-    gyro_turn(-30, slow_turn=True)
-    drive_cm(4, 30, 5)
-    #run_motor_for_degrees(motor_d, -600, 1000)
-    motor_d.run_until_stalled(-500, then=Stop.HOLD, duty_limit=100)
-    drive_cm(10, 30, 5)
-    run_motor_for_degrees(motor_d, 500, 300)
-    drive_cm(-35, 30, 5)
-    gyro_turn(31, slow_turn=True, axis_turn=False)
- #   run_motor_for_degrees(motor_d, -500, 300)
-    motor_d.run_until_stalled(-500, then=Stop.HOLD, duty_limit=100)
- 
-    drive_cm(10, 30, 5)
-    run_motor_for_degrees(motor_d, 500, 300)
+    drive_cm(80, 30, 20)
+    gyro_turn(-90, slow_turn=True,axis_turn=True)
+    motor_c.run_until_stalled(600, then=Stop.BRAKE, duty_limit=35)
+    drive_cm(14, 30, 5)
+    #gyro_turn(-30, slow_turn=True)
+    #drive_cm(12, 30, 30)
 
+    run_motor_for_degrees(motor_c, -300, 300)
+    #gyro_turn(10, fast_turn=True)
+
+    #control_lift_motor = Motor(Port.D,Direction.COUNTERCLOCKWISE,[[12,20],[12,20]])
+    #control_lift_motor.run_until_stalled(-200,then=Stop.BRAKE,duty_limit=10)
+#    drive_cm(10, 30, 5)
+    # control_lift_motor.run_angle(200,-90,then=Stop.HOLD,wait=True)
+
+    # drive_cm(-35, 30, 5)
+    # gyro_turn(21, slow_turn=True)
+    # control_lift_motor.run_angle(200,-30,then=Stop.HOLD,wait=True)
+    # drive_cm(-10, 30, 5)   
+    # control_lift_motor.run_angle(200,50,then=Stop.HOLD,wait=True)
+    # control_lift_motor.run_angle(200,-50,then=Stop.HOLD,wait=True)
+    # drive_cm(-10, 30, 5)
+    # gyro_turn(-90, slow_turn=True)
+    # drive_cm(76, 30, 20)
+    # control_lift_motor.close()
+  
+ 
 def mission_6():
     setup_drive()
     print("Mission 6")
