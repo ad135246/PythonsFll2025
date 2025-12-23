@@ -10,7 +10,7 @@ from pybricks.parameters import Color
 # -----------------------------
 WHEEL_RADIUS_CM = 3.175
 WHEEL_DIAMETER_MM = WHEEL_RADIUS_CM * 2 * 10  # cm -> mm
-AXLE_TRACK_MM = 139  # IMPORTANT: set this to your real wheel-to-wheel distance
+AXLE_TRACK_MM = 140 # IMPORTANT: set this to your real wheel-to-wheel distance
 
 hub = PrimeHub()
 
@@ -57,7 +57,7 @@ def setup_drive():
 def gyro_turn(target_angle: float,
               mode: str = "medium",
               settle_tol: float = 2.0,
-              settle_timeout_ms: int = 1500):
+              settle_timeout_ms: int = 3000):
     """
     Hybrid turn:
       1) DriveBase robot.turn() does most of the turn (repeatable).
@@ -71,8 +71,8 @@ def gyro_turn(target_angle: float,
     # Turn speed profiles (deg/s) for DriveBase
     turn_rates = {
         "slow": 80,
-        "medium": 120,
-        "fast": 180,
+        "medium": 140,
+        "fast": 200,
     }
     turn_rate = turn_rates.get(mode, 120)
 
@@ -86,10 +86,10 @@ def gyro_turn(target_angle: float,
     # How much of the turn we trust DriveBase to do before IMU settle
     # (leave a small margin so robot.turn doesn't overshoot and fight the settle loop)
     settle_margin = {
-        "slow": 6,
-        "medium": 8,
-        "fast": 12,
-    }.get(mode, 8)
+        "slow": 0,
+        "medium": 3,
+        "fast": 5,
+    }.get(mode, 3)
 
     # --- Prep ---
     emergency_stop_check()
@@ -103,32 +103,33 @@ def gyro_turn(target_angle: float,
 
     # --- Phase A: bulk turn with DriveBase ---
     bulk = target_angle
-
+  
     # Leave a margin for IMU settling
     if abs(target_angle) > settle_margin:
         bulk = target_angle - (settle_margin if target_angle > 0 else -settle_margin)
 
     robot.turn(bulk)
+    h_after_bulk = hub.imu.heading()
+    print("bulk_cmd:", bulk, "heading_after_bulk:", h_after_bulk)
+
+    # OPTIONAL: print a suggested axle-track scale factor if bulk is very off
+    # (useful for calibration; doesn't change behavior)
+    if abs(bulk) >= 30 and abs(h_after_bulk) > 1:
+        scale = abs(bulk) / abs(h_after_bulk)
+        print("Suggested AXLE_TRACK_MM *= ~", scale)
 
     # --- Phase B: IMU settle (fine correction) ---
     sw = StopWatch()
     sw.reset()
-
-    def set_nudge(sign: int):
-        # sign = +1 means turn right; -1 means turn left
-        if sign > 0:
-            left_motor.run(nudge_speed)
-            right_motor.run(-nudge_speed)
-        else:
-            left_motor.run(-nudge_speed)
-            right_motor.run(nudge_speed)
 
     # Pulse-based settle is more stable than continuous run (less overshoot)
     while True:
         emergency_stop_check()
 
         h = hub.imu.heading()
+        
         err = target_angle - h
+        print("nudge:TargetAngle", target_angle, "heading:", h,"err:",err)
 
         if abs(err) <= settle_tol:
             break
@@ -136,12 +137,25 @@ def gyro_turn(target_angle: float,
         if sw.time() > settle_timeout_ms:
             # give up but stop safely
             break
+        # BIG error → don't creep, just turn again
+        if abs(err) > 5:
+            print("robot:secondaryturn", err * 0.8) 
+            robot.turn(err * 0.8)   # take most of it, leave a little margin
+            continue
 
-        set_nudge(1 if err > 0 else -1)
-        wait(20)
+        # SMALL error → fine nudge
+        speed = min(turn_rate, max(60, int(abs(err) * 6)))
+    
+        direction = 1 if err > 0 else -1
+        print("nudge:speed", speed, "err:", err,"turn_rate:",turn_rate,"direction:",direction)
+
+        left_motor.run(direction * speed)
+        right_motor.run(-direction * speed)
+        wait(40)                    # longer pulse
         left_motor.stop()
         right_motor.stop()
         wait(30)
+
 
     left_motor.stop()
     right_motor.stop()
@@ -285,80 +299,58 @@ def mission_3():
     hub.imu.reset_heading(0)
     drive_cm(200, 30, 50)
 
-
-
-def mission_4():
-    # This matches your “Challenge H 90” style (your Mission 3 file)
+def mission_4(): #Adi Mission - Get the broom Start from left edge of E
     setup_drive()
-    # print("Mission 3")
-
-    drive_cm(41, 20, 20)
-    drive_cm(-8, 10, 15)
-    drive_cm(17.5, 10, 10)
-    drive_cm(-4, 30, 10)
-    motor_c.run_until_stalled(-200, then=Stop.BRAKE, duty_limit=50)
-    drive_cm(2, 30, 10)
-    motor_d.run_until_stalled(-300, then=Stop.BRAKE, duty_limit=50)
-    motor_c.run_until_stalled(200, then=Stop.BRAKE, duty_limit=60)
-    drive_cm(-41, 30, 10)
- 
-    #run_motor_for_degrees(motor_c, 600, speed: 50, accel: 100, stop=Stop.HOLD):
-     
-    
-def mission_5():
-    setup_drive()
-
 
     drive_cm(69, 30, 50)
-    gyro_turn(-43)
+    gyro_turn(-45)
 
     drive_cm(21, 20, 30)
 
-    # lift_arm(port.D , lift_arm_degrees=180)
-    run_motor_for_degrees(motor_d, 180, 1000)
+    run_motor_for_degrees(motor_d, 180, 1000) #raise garden bed
+    motor_c.run_until_stalled(200, then=Stop.BRAKE, duty_limit=60) #drop net
+    motor_c.run_until_stalled(-200, then=Stop.BRAKE, duty_limit=80) #raise net to get broom 
 
-    # drop_arm(port.C , 150) then 200 fast
-    #run_motor_for_degrees(motor_c, 300, 300)
-    #run_motor_for_degrees(motor_c, 200, 1000)
-    motor_c.run_until_stalled(200, then=Stop.BRAKE, duty_limit=60)
+    drive_cm(-22, 17, 500) #back away from garden bed
+    gyro_turn(-120, mode="fast") #turn towards home
 
-    # lift_arm(port.C , -300 slow)
-    motor_c.run_until_stalled(-200, then=Stop.BRAKE, duty_limit=80)
+    drive_cm(61, 30, 500) #drive towards home
 
-    drive_cm(-22, 17, 500)
-    gyro_turn(-120, mode="fast")
-
-    drive_cm(61, 30, 500)
-
-
-def mission_6():
+def mission_5():
     setup_drive()
-    drive_cm(50, 100, 50)
-    drive_cm(-50, 30, 50)
+
+    drive_cm(41, 20, 20)
+    drive_cm(-11, 10, 15)
+    drive_cm(19.5, 30, 30)
+    motor_c.run_until_stalled(-300, then=Stop.BRAKE, duty_limit=50) #drop gear mechanism
+    drive_cm(2, 30, 10)
+    motor_d.run_until_stalled(-500, then=Stop.BRAKE, duty_limit=60) #run gear mechanism
+    motor_c.run_until_stalled(400, then=Stop.BRAKE, duty_limit=100) #raise gear mechanism
+    drive_cm(-50, 30, 50) #back to home
+ 
+def mission_6(): #Deposit Stuff
+    setup_drive()
+    drive_cm(50, 100, 50) #drop stuff in deposit zone
+    drive_cm(-50, 30, 50) #back to home
 
 
-def mission_7():
+def mission_7(): #Raise Hell
     setup_drive()
    
     hub.imu.reset_heading(0)
-    wait(200)
+    wait(100)
 
-    drive_cm(79, 30, 50)
+    drive_cm(79, 30, 50) #move forward to wall
     gyro_turn(90)
-    motor_c.run_until_stalled(600, then=Stop.BRAKE, duty_limit=35)
-    drive_cm(13, 30, 50)
-    run_motor_for_degrees(motor_c, -400, 300)
-    gyro_turn(45)
-    motor_d.run_until_stalled(-600, then=Stop.BRAKE, duty_limit=35)
+    motor_c.run_until_stalled(600, then=Stop.BRAKE, duty_limit=35) #lower arm trolley
+    drive_cm(13, 30, 50) 
+    run_motor_for_degrees(motor_c, -400, 300) #raise arm trolley
+    gyro_turn(45) #turn towards dinaosaur fossil
+    motor_d.run_until_stalled(-600, then=Stop.BRAKE, duty_limit=35) #lower arm to hit fossil
     drive_cm(18, 30, 50)
-    motor_d.run_until_stalled(500, then=Stop.BRAKE, duty_limit=60)
 
-    #run_motor_for_degrees(motor_d, 200, 500)
-    gyro_turn(-20, mode="fast")
-
-
-    
-
+    run_motor_for_degrees(motor_d, 300, 500) #raise arm after hitting fossil
+    gyro_turn(-30, mode="medium")
 
 MISSION_COLORS = [
     Color.RED,     # Mission 0
