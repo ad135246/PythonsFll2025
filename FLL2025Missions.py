@@ -109,7 +109,8 @@ def gyro_turn(target_angle: float,
         bulk = target_angle - (settle_margin if target_angle > 0 else -settle_margin)
 
     robot.turn(bulk)
-
+    h = hub.imu.heading()
+    print(f"Post-bulkturn heading: {h:.2f}° (target {target_angle}°)")
     # --- Phase B: IMU settle (fine correction) ---
     sw = StopWatch()
     sw.reset()
@@ -265,24 +266,18 @@ def mission_2():
     setup_drive()
     # print("Mission 2")
 
-    hub.imu.reset_heading(0)
     wait(200)
 
-    # drive_cm(37, 30, 50)
+    drive_cm(37, 30, 50)
 
-    # # SPIKE had a complex stall-detect version; here is a simpler "repeat wiggle" version:
-    # # for _ in range(3):  # repetitions=3
-    # #     run_motor_for_degrees(motor_c, -180, 750)
-    # #     run_motor_for_degrees(motor_c, 180, 750)
+    for _ in range(3):  # repetitions=3
+        run_motor_for_degrees(motor_c, -180, 750)
+        run_motor_for_degrees(motor_c, 180, 750)
 
-    # drive_cm(-15.5, 30, 50)
+    drive_cm(-15.5, 30, 50)
 
-    # hub.imu.reset_heading(0)
-    # wait(200)
-    # gyro_turn(-45, mode="medium")
-    # gyro_turn(-45, mode="medium")
-    drive_cm(100, 100, 50)
-    drive_cm(100, 100, 50)
+    gyro_turn(-90, mode="medium")
+    drive_cm(50, 100, 50)
 
 def mission_3():
     # This matches your “Challenge H 90” style (your Mission 3 file)
